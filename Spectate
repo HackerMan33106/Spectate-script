@@ -1,5 +1,5 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Robojini/Tuturial_UI_Library/main/UI_Template_1"))()
-local Window = Library.CreateLib("Spectate script", "RJTheme1")
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/HackerMan33106/Robojini-GUI/main/SpectateGui.lua"))()
+local Window = Library.CreateLib("Spectate script 1.1", "RJTheme1")
 
 -- 1 Section Spectate
 local Tab = Window:NewTab("Наблюдение")
@@ -53,12 +53,58 @@ local function toggleSpectate(playerName)
     end
 end
 
-Section:NewTextBox("Наблюдать за игроком", "Введите ник для наблюдения за игроком.", function(spectate)
-    game.Players.LocalPlayer.Character.Scripts.Controls.Enabled = false
-    toggleSpectate(spectate)
+local playerService = game:GetService("Players")
+local workspace = game:GetService("Workspace")
+local localPlayer = playerService.LocalPlayer
+
+local function updateDropdown(dropdown)
+    local playerNames = {}
+    for _, player in pairs(playerService:GetPlayers()) do
+        if player ~= localPlayer then
+            table.insert(playerNames, player.Name)
+        end
+    end
+
+    dropdown:Refresh(playerNames, true)
+end
+
+local dropdown = Section:NewDropdown("Наблюдать за игроком", "Выберите ник для наблюдения за игроком.", {}, function(selectedPlayer)
+    targetPlayer = workspace:FindFirstChild(selectedPlayer)
+    if targetPlayer and targetPlayer:FindFirstChild("HumanoidRootPart") then
+        game.Players.LocalPlayer.Character.Scripts.Controls.Enabled = false
+        toggleSpectate(selectedPlayer)
+    else
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "Ошибка",
+            Text = "Не удалось найти игрока или его HumanoidRootPart в Workspace",
+            Duration = 3
+        })
+    end
 end)
+
+playerService.PlayerAdded:Connect(function()
+    updateDropdown(dropdown)
+end)
+
+playerService.PlayerRemoving:Connect(function()
+    updateDropdown(dropdown)
+end)
+
+updateDropdown(dropdown)
 
 Section:NewButton("Перестать наблюдать за игроком", "Вы перестаёте наблюдать за игроком.", function()
     game.Players.LocalPlayer.Character.Scripts.Controls.Enabled = true
     stopSpectating()
+end)
+
+timeTP = 0.25
+Section:NewTextBox("Задержка телепорта к игроку", "Введите время в секундах.", function(timeOut)
+    timeTP = timeOut
+end)
+
+Section:NewButton("Перестать наблюдать и телепортироваться.", "Вы телепортируетесь к игроку прекращяя наблюдать.", function()
+    game.Players.LocalPlayer.Character.Scripts.Controls.Enabled = true
+    stopSpectating()
+    wait(timeTP)
+    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.HumanoidRootPart.CFrame
 end)
